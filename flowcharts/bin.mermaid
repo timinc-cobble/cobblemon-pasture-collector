@@ -1,0 +1,66 @@
+flowchart TD
+    D{c.tickType} -- RANDOM_TICK --> E[On random tick]
+    E -- c.blockTickInterval random ticks have passed --> F[Interval]
+
+    D -- TICK --> G[On game tick]
+    G -- c.blockTickInterval game ticks have passed --> F
+
+    F --> K{c.checkDiagonal}
+
+    K -- true --> L[Find Pokémon in adjacent and diagonal pastures]
+    K -- false --> M[Find Pokémon in adjacent pastures only]
+
+    L --> H{c.targetMon}
+    M --> H
+
+    H -- ALL --> I[Use all Pokémon found]
+    H -- RANDOM --> J[Choose one random Pokémon found]
+
+    I --> N[Process selected Pokémon for drops]
+    J --> N
+
+    N --> O[Find matching droppers for each selected Pokémon]
+
+    subgraph W[Evaluate each matching dropper]
+        direction TD
+
+        O --> C{Configured cooldowns ready?}
+
+        C -- no --> X[Reject this dropper]
+        C -- yes --> E2[Evaluate dropper conditions]
+
+        E2 --> Y{Dropper succeeds?}
+
+        Y -- no --> X
+        Y -- yes --> A[Add results to drop list]
+
+        A --> Z[Update applicable cooldown timestamps]
+        Z --> NEXT[Continue checking matching droppers]
+        X --> NEXT
+    end
+
+    NEXT --> R[Drop list]
+
+    N --> P{c.baseCobblemonLootEnabled}
+    P -- true --> Q[Roll base Cobblemon loot]
+    P -- false --> S[Skip base Cobblemon loot]
+
+    Q --> R
+
+    R --> T{Drop list empty?}
+    T -- yes --> U[/Stop, have a nice day\]
+    T -- no --> V[Drop items to c.pastureDropTargets, using each drop target as fallback for the previous one]
+
+    V --> CRY{c.playCryOnDrop?}
+    V --> BIN{Pasture Bin drop succeeded?}
+
+        CRY -- true --> AA[Play that Pokémon's cry]
+        CRY -- false --> AB[Skip cry]
+
+        BIN -- yes --> GP[Play green particle]
+        BIN -- no --> FP[Play flame particle]
+
+        AA --> DONE[Done]
+        AB --> DONE
+        GP --> DONE
+        FP --> DONE

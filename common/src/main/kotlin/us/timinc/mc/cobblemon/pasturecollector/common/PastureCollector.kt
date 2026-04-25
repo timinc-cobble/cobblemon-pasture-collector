@@ -40,11 +40,6 @@ object PastureCollector : AbstractMod<PastureCollector.PastureCollectorConfig>(
                 ALL, // Every mon in all the nearby pastures gets a chance to drop at the same time.
                 RANDOM, // A random mon in all the nearby pastures gets a chance to drop.
             }
-
-            enum class IntervalType {
-                PER_POKEMON,
-                PER_DROPPER,
-            }
         }
 
         val baseCobblemonLootEnabled: Boolean = true

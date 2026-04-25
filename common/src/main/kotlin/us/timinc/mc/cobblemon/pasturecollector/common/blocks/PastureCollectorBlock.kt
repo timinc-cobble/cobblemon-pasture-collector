@@ -86,8 +86,7 @@ class PastureCollectorBlock(properties: Properties) : BaseEntityBlock(properties
         random: RandomSource,
     ) {
         super.randomTick(state, level, pos, random)
-        if (PastureCollector.config.tickType != TickType.RANDOM_TICK) return
-        getBlockEntity(pos, level).intervalRep()
+        getBlockEntity(pos, level).randomTick()
     }
 
     override fun useWithoutItem(
@@ -106,7 +105,9 @@ class PastureCollectorBlock(properties: Properties) : BaseEntityBlock(properties
 
     override fun getRenderShape(blockState: BlockState): RenderShape = RenderShape.MODEL
 
-    override fun isRandomlyTicking(blockState: BlockState): Boolean = true
+    override fun isRandomlyTicking(blockState: BlockState): Boolean =
+        PastureCollector.config.tickType == TickType.RANDOM_TICK
+
 
     fun getBlockEntity(pos: BlockPos, level: ServerLevel): PastureCollectorBlockEntity {
         val blockEntity =

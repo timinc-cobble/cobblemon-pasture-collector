@@ -27,6 +27,8 @@ import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.PastureCo
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.Registries.Entity.PASTURE_COLLECTOR_BLOCK_ENTITY
 import us.timinc.mc.cobblemon.pasturecollector.common.event.PasturePokemonTickedEvent
 import us.timinc.mc.cobblemon.pasturecollector.common.inventory.PastureCollectorMenu
+import us.timinc.mc.cobblemon.timcore.getIntOrNull
+import us.timinc.mc.cobblemon.timcore.getLongOrNull
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -41,17 +43,14 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
         const val PARTICLE_POS_XZ_RANDOMNESS_MIN = -0.15
         const val PARTICLE_POS_XZ_RANDOMNESS_MAX = 0.15
 
-        val TICKER = BlockEntityTicker<PastureCollectorBlockEntity> { level, _, _, entity ->
-            if (PastureCollector.config.tickType != TickType.TICK) return@BlockEntityTicker
-            if (level !is ServerLevel) return@BlockEntityTicker
-            if ((level.gameTime % PastureCollector.config.blockTickInterval).toInt() != 0) return@BlockEntityTicker
-
-            entity.intervalRep()
+        val TICKER = BlockEntityTicker<PastureCollectorBlockEntity> { _, _, _, entity ->
+            entity.tick()
         }
     }
 
     private var items = NonNullList.withSize(CONTAINER_SIZE, ItemStack.EMPTY)
     private var lastIntervalRep: Long = 0
+    private var randomTicks: Int = 0
 
     override fun getDefaultName(): Component = Component.translatable("pasturecollector.container.pasture_collector")
     override fun getContainerSize(): Int = CONTAINER_SIZE
@@ -75,6 +74,26 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     override fun createMenu(containerId: Int, inventory: Inventory): AbstractContainerMenu =
         PastureCollectorMenu(containerId, inventory, this)
 
+    fun tick() {
+        if (PastureCollector.config.tickType != TickType.TICK) return
+
+        (level as? ServerLevel)?.let { level ->
+            if (lastIntervalRep - level.gameTime < PastureCollector.config.blockTickInterval) return
+
+            intervalRep()
+        }
+    }
+
+    fun randomTick() {
+        if (PastureCollector.config.tickType != TickType.RANDOM_TICK) return
+        if (level !is ServerLevel) return
+
+        randomTicks++
+        if (randomTicks < PastureCollector.config.blockTickInterval) return
+
+        intervalRep()
+    }
+
     fun intervalRep() {
         val serverLevel = level as? ServerLevel ?: return
         if (serverLevel.gameTime - lastIntervalRep < PastureCollector.config.blockTickInterval) return
@@ -85,7 +104,7 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     }
 
     fun dropFromAll() {
-        PastureCollector.Events.PASTURE_COLLECTOR_TICKED.post(*getNearbyPastures(level as ServerLevel).flatMap { pasture ->
+        PastureCollector.Events.PASTURE_COLLECTOR_TICKED.emit(*getNearbyPastures(level as ServerLevel).flatMap { pasture ->
             pasture.tetheredPokemon.mapNotNull { tethered ->
                 tethered.getPokemon()?.entity?.let {
                     PasturePokemonTickedEvent(
@@ -244,10 +263,12 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     override fun saveAdditional(compoundTag: CompoundTag, provider: HolderLookup.Provider) {
         super.saveAdditional(compoundTag, provider)
         compoundTag.putLong("last_interval_rep", lastIntervalRep)
+        compoundTag.putInt("random_ticks", randomTicks)
     }
 
     override fun loadAdditional(compoundTag: CompoundTag, provider: HolderLookup.Provider) {
         super.loadAdditional(compoundTag, provider)
-        this.lastIntervalRep = compoundTag.getLong("last_interval_rep")
+        this.lastIntervalRep = compoundTag.getLongOrNull("last_interval_rep") ?: 0L
+        this.randomTicks = compoundTag.getIntOrNull("random_ticks") ?: 0
     }
 }

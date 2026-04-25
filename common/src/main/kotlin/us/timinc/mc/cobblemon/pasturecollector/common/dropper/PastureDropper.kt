@@ -5,6 +5,7 @@ import com.cobblemon.mod.common.util.toBlockPos
 import com.mojang.serialization.Codec
 import com.mojang.serialization.MapCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
+import net.minecraft.nbt.CompoundTag
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.storage.loot.LootParams
@@ -16,6 +17,8 @@ import us.timinc.mc.cobblemon.droploottables.api.Dropper
 import us.timinc.mc.cobblemon.droploottables.api.Dropper.Companion.CodecPieces
 import us.timinc.mc.cobblemon.droploottables.api.DropperType
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector
+import us.timinc.mc.cobblemon.timcore.getCompoundOrNull
+import us.timinc.mc.cobblemon.timcore.getIntOrNull
 import kotlin.jvm.optionals.getOrNull
 
 class PastureDropper(
@@ -23,7 +26,7 @@ class PastureDropper(
     override val lootTables: List<ResourceLocation>,
     override val conditions: List<LootItemCondition>,
     override val dropTarget: ResourceLocation?,
-    val interval: Int,
+    val cooldown: Int,
 ) : Dropper<PastureDropper.Context>() {
     override fun getType(): DropperType<*, *> = PastureCollector.DropperTypes.PASTURE
 
@@ -34,14 +37,14 @@ class PastureDropper(
                 CodecPieces.getTables(PastureDropper::lootTables),
                 CodecPieces.getConditions(PastureDropper::conditions),
                 CodecPieces.getDropTarget(PastureDropper::dropTarget),
-                Codec.INT.fieldOf("ticks").forGetter(PastureDropper::interval),
-            ).apply(instance) { trigger, lootTables, conditions, dropTarget, ticks ->
+                Codec.INT.fieldOf("cooldown").forGetter(PastureDropper::cooldown),
+            ).apply(instance) { trigger, lootTables, conditions, dropTarget, cooldown ->
                 PastureDropper(
                     trigger,
                     lootTables,
                     conditions,
                     dropTarget.getOrNull(),
-                    ticks
+                    cooldown,
                 )
             }
         }
@@ -70,6 +73,21 @@ class PastureDropper(
 
     override fun canDrop(context: Context): Boolean =
         !context.pokemonEntity.isBusy
-                && context.pokemonEntity.ticksLived % interval == 0
+                &&
+                let {
+                    if (cooldown <= 1) return@let true
+
+                    val id = id?.toString() ?: return@let false
+                    val persistentData = context.pokemonEntity.pokemon.persistentData
+                    val cooldownCollection = persistentData.getCompoundOrNull("pasturecollector:cooldowns") ?: let {
+                        val newCollection = CompoundTag()
+                        persistentData.put("pasturecollector:cooldowns", newCollection)
+                        newCollection
+                    }
+
+                    val myCooldown = cooldownCollection.getIntOrNull(id) ?: cooldown
+                    cooldownCollection.putInt(id, myCooldown - 1)
+                    return@let myCooldown <= 0
+                }
                 && super.canDrop(context)
 }
