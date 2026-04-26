@@ -5,7 +5,6 @@ import com.cobblemon.mod.common.util.toBlockPos
 import com.mojang.serialization.Codec
 import com.mojang.serialization.MapCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import net.minecraft.nbt.CompoundTag
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.storage.loot.LootParams
@@ -17,8 +16,7 @@ import us.timinc.mc.cobblemon.droploottables.api.Dropper
 import us.timinc.mc.cobblemon.droploottables.api.Dropper.Companion.CodecPieces
 import us.timinc.mc.cobblemon.droploottables.api.DropperType
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector
-import us.timinc.mc.cobblemon.timcore.getCompoundOrNull
-import us.timinc.mc.cobblemon.timcore.getIntOrNull
+import us.timinc.mc.cobblemon.pasturecollector.common.extensions.tickPastureBinCooldown
 import kotlin.jvm.optionals.getOrNull
 
 class PastureDropper(
@@ -73,21 +71,6 @@ class PastureDropper(
 
     override fun canDrop(context: Context): Boolean =
         !context.pokemonEntity.isBusy
-                &&
-                let {
-                    if (cooldown <= 1) return@let true
-
-                    val id = id?.toString() ?: return@let false
-                    val persistentData = context.pokemonEntity.pokemon.persistentData
-                    val cooldownCollection = persistentData.getCompoundOrNull("pasturecollector:cooldowns") ?: let {
-                        val newCollection = CompoundTag()
-                        persistentData.put("pasturecollector:cooldowns", newCollection)
-                        newCollection
-                    }
-
-                    val myCooldown = cooldownCollection.getIntOrNull(id) ?: cooldown
-                    cooldownCollection.putInt(id, myCooldown - 1)
-                    return@let myCooldown <= 0
-                }
+                && (id?.let { context.pokemonEntity.pokemon.tickPastureBinCooldown(it, cooldown) } ?: false)
                 && super.canDrop(context)
 }

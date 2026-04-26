@@ -91,6 +91,10 @@ object PastureCollector : AbstractMod<PastureCollector.PastureCollectorConfig>(
             val PASTURE_COLLECTOR_STORAGE = modResource("pasture_collector_storage")
             val PASTURE_COLLECTOR_WORLD_POSITION = modResource("pasture_collector_world_position")
         }
+
+        object PersistentData {
+            val COOLDOWNS = modResource("cooldowns")
+        }
     }
 
     object DropperTypes {
