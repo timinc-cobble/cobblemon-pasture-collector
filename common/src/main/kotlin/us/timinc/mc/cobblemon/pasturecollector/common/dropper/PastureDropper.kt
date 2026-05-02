@@ -2,6 +2,7 @@ package us.timinc.mc.cobblemon.pasturecollector.common.dropper
 
 import com.cobblemon.mod.common.entity.pokemon.PokemonEntity
 import com.cobblemon.mod.common.util.toBlockPos
+import com.cobblemon.mod.common.util.toVec3d
 import com.mojang.serialization.Codec
 import com.mojang.serialization.MapCodec
 import com.mojang.serialization.codecs.RecordCodecBuilder
@@ -24,7 +25,7 @@ class PastureDropper(
     override val lootTables: List<ResourceLocation>,
     override val conditions: List<LootItemCondition>,
     override val dropTarget: ResourceLocation?,
-    val cooldown: Int,
+    val cooldown: Int = 0,
 ) : Dropper<PastureDropper.Context>() {
     override fun getType(): DropperType<*, *> = PastureCollector.DropperTypes.PASTURE
 
@@ -35,7 +36,7 @@ class PastureDropper(
                 CodecPieces.getTables(PastureDropper::lootTables),
                 CodecPieces.getConditions(PastureDropper::conditions),
                 CodecPieces.getDropTarget(PastureDropper::dropTarget),
-                Codec.INT.fieldOf("cooldown").forGetter(PastureDropper::cooldown),
+                Codec.INT.optionalFieldOf("cooldown", 0).forGetter(PastureDropper::cooldown),
             ).apply(instance) { trigger, lootTables, conditions, dropTarget, cooldown ->
                 PastureDropper(
                     trigger,
@@ -56,7 +57,7 @@ class PastureDropper(
     ) : DropContext {
         override fun toLootParams(): LootParams {
             val params = mutableMapOf<LootContextParam<out Any>, Any>(
-                LootContextParams.ORIGIN to pokemonEntity.position().toBlockPos(),
+                LootContextParams.ORIGIN to pokemonEntity.position().toBlockPos().toVec3d(),
                 LootContextParams.THIS_ENTITY to pokemonEntity,
             )
 

@@ -115,6 +115,8 @@ object PastureCollector : AbstractMod<PastureCollector.PastureCollectorConfig>(
         Registries.Entity
         @Suppress("UnusedExpression")
         Registries.Menu
+        @Suppress("UnusedExpression")
+        DropperTypes
 
         Events.PASTURE_COLLECTOR_TICKED.subscribe(Priority.NORMAL, PastureTickHandler::handle)
     }
