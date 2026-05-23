@@ -26,6 +26,7 @@ class PastureDropper(
     override val conditions: List<LootItemCondition>,
     override val dropTarget: ResourceLocation?,
     val cooldown: Int = 0,
+    val preserveBaseDrops: Boolean = false,
 ) : Dropper<PastureDropper.Context>() {
     override fun getType(): DropperType<*, *> = PastureCollector.DropperTypes.PASTURE
 
@@ -37,13 +38,16 @@ class PastureDropper(
                 CodecPieces.getConditions(PastureDropper::conditions),
                 CodecPieces.getDropTarget(PastureDropper::dropTarget),
                 Codec.INT.optionalFieldOf("cooldown", 0).forGetter(PastureDropper::cooldown),
-            ).apply(instance) { trigger, lootTables, conditions, dropTarget, cooldown ->
+                Codec.BOOL.optionalFieldOf("preserve_base_drops", false)
+                    .forGetter(PastureDropper::preserveBaseDrops),
+            ).apply(instance) { trigger, lootTables, conditions, dropTarget, cooldown, preserveBaseDrops ->
                 PastureDropper(
                     trigger,
                     lootTables,
                     conditions,
                     dropTarget.getOrNull(),
                     cooldown,
+                    preserveBaseDrops,
                 )
             }
         }
