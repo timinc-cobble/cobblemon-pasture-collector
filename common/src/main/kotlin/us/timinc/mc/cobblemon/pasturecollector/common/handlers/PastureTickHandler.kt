@@ -62,6 +62,10 @@ object PastureTickHandler : DropHandler<PastureDropper.Context, PastureDropper, 
     override fun processOtherDrops(evt: PasturePokemonTickedEvent): List<ItemStack> {
         if (!PastureCollector.config.baseCobblemonLootEnabled) return listOf()
 
+        val ctx = getContext(evt)
+        val droppers = getDroppers(ctx) ?: emptyList()
+        if (!droppers.isEmpty() && !droppers.any(PastureDropper::preserveBaseDrops)) return emptyList()
+
         val baseDrops = evt.pokemonEntity.form.drops.getDrops(pokemon = evt.pokemonEntity.pokemon)
         return baseDrops.mapNotNull { drop ->
             if (drop is ItemDropEntry) {
