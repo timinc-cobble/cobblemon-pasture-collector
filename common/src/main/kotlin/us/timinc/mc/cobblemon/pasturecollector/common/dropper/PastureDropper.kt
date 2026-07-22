@@ -12,12 +12,14 @@ import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParam
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition
+import us.timinc.mc.cobblemon.droploottables.DropLootTables
 import us.timinc.mc.cobblemon.droploottables.api.DropContext
 import us.timinc.mc.cobblemon.droploottables.api.Dropper
 import us.timinc.mc.cobblemon.droploottables.api.Dropper.Companion.CodecPieces
 import us.timinc.mc.cobblemon.droploottables.api.DropperType
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector
-import us.timinc.mc.cobblemon.pasturecollector.common.extensions.tickPastureBinCooldown
+import us.timinc.mc.cobblemon.pasturecollector.common.extensions.advancePastureBinCooldown
+import us.timinc.mc.cobblemon.pasturecollector.common.extensions.isPastureBinCooldownReady
 import kotlin.jvm.optionals.getOrNull
 
 class PastureDropper(
@@ -63,6 +65,7 @@ class PastureDropper(
             val params = mutableMapOf<LootContextParam<out Any>, Any>(
                 LootContextParams.ORIGIN to pokemonEntity.position().toBlockPos().toVec3d(),
                 LootContextParams.THIS_ENTITY to pokemonEntity,
+                DropLootTables.LootParams.FOCUS_POKEMON to pokemonEntity.pokemon,
             )
 
             return LootParams(
@@ -75,7 +78,12 @@ class PastureDropper(
     }
 
     override fun canDrop(context: Context): Boolean =
-        !context.pokemonEntity.isBusy
-                && (id?.let { context.pokemonEntity.pokemon.tickPastureBinCooldown(it, cooldown) } ?: false)
-                && super.canDrop(context)
+        id != null && !context.pokemonEntity.isBusy && super.canDrop(context)
+
+    fun isCooldownReady(context: Context): Boolean =
+        id?.let { context.pokemonEntity.pokemon.isPastureBinCooldownReady(it, cooldown) } ?: false
+
+    fun advanceCooldown(context: Context) {
+        id?.let { context.pokemonEntity.pokemon.advancePastureBinCooldown(it, cooldown) }
+    }
 }

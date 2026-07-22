@@ -7,8 +7,19 @@ import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector
 import us.timinc.mc.cobblemon.timcore.getCompoundOrNull
 import us.timinc.mc.cobblemon.timcore.getIntOrNull
 
-fun Pokemon.tickPastureBinCooldown(id: ResourceLocation, cooldown: Int): Boolean {
-    if (cooldown <= 1) return true
+private fun Pokemon.getPastureBinCooldown(id: ResourceLocation): Int? =
+    persistentData
+        .getCompoundOrNull(PastureCollector.DataKeys.PersistentData.COOLDOWNS.toString())
+        ?.getIntOrNull(id.toString())
+
+fun Pokemon.isPastureBinCooldownReady(id: ResourceLocation, cooldown: Int): Boolean =
+    cooldown <= 1 || (getPastureBinCooldown(id) ?: cooldown) <= 0
+
+fun Pokemon.advancePastureBinCooldown(id: ResourceLocation, cooldown: Int) {
+    if (cooldown <= 1) return
+
+    val currentRemaining = getPastureBinCooldown(id) ?: cooldown
+    val nextRemaining = if (currentRemaining <= 0) cooldown else currentRemaining - 1
 
     val cooldownCollection =
         persistentData.getCompoundOrNull(PastureCollector.DataKeys.PersistentData.COOLDOWNS.toString()) ?: let {
@@ -17,11 +28,5 @@ fun Pokemon.tickPastureBinCooldown(id: ResourceLocation, cooldown: Int): Boolean
             newCollection
         }
 
-    val targetCooldown = cooldownCollection.getIntOrNull(id.toString()) ?: cooldown
-    if (targetCooldown <= 0) {
-        cooldownCollection.putInt(id.toString(), cooldown)
-        return true
-    }
-    cooldownCollection.putInt(id.toString(), targetCooldown - 1)
-    return false
+    cooldownCollection.putInt(id.toString(), nextRemaining)
 }
