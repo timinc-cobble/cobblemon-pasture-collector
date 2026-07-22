@@ -59,6 +59,45 @@ object PastureTickHandler : DropHandler<PastureDropper.Context, PastureDropper, 
 
     override fun getLevel(evt: PasturePokemonTickedEvent): ServerLevel? = evt.collector.level as? ServerLevel
 
+    override fun handle(evt: PasturePokemonTickedEvent) {
+        if (!isRelevantEvent(evt)) return
+        val dropTargets = getDropTarget(evt) ?: return
+        val context = getContext(evt)
+        val applicableDroppers = getDroppers(context).orEmpty()
+        val readyDroppers = applicableDroppers.filter { it.isCooldownReady(context) }
+        val drops = readyDroppers.flatMap { dropper ->
+            val toDrop = dropper.lootTables.flatMap { tableId ->
+                dropFromTable(tableId, context.toLootParams(), context.level)
+            }
+
+            dropper.dropTarget?.let { overridingDropTargetId ->
+                val dropTarget = dropTargetTypes[overridingDropTargetId]?.invoke(evt)
+                    ?: return@flatMap emptyList()
+                toDrop.forEach(dropTarget::dropTo)
+                return@flatMap emptyList()
+            }
+
+            toDrop
+        }.toMutableList()
+
+        drops.addAll(processOtherDrops(evt))
+        if (DropLootTables.config.legacyMode) {
+            drops.addAll(processLegacyDrops(evt))
+        }
+        drops.shuffle()
+
+        for (drop in drops) {
+            var toDrop = drop.copy()
+            for (dropTarget in dropTargets) {
+                toDrop = dropTarget.dropTo(toDrop)
+                if (toDrop.isEmpty) continue
+            }
+        }
+
+        applicableDroppers.forEach { it.advanceCooldown(context) }
+        cleanup(evt, drops)
+    }
+
     override fun processOtherDrops(evt: PasturePokemonTickedEvent): List<ItemStack> {
         if (!PastureCollector.config.baseCobblemonLootEnabled) return listOf()
 
@@ -78,6 +117,13 @@ object PastureTickHandler : DropHandler<PastureDropper.Context, PastureDropper, 
             }
             return@mapNotNull null
         }
+    }
+
+    override fun processLegacyDrops(evt: PasturePokemonTickedEvent): List<ItemStack> {
+        return if (isRelevantEvent(evt))
+            getLegacyDrops(evt.pokemonEntity.pokemon.form, "collector", getContext(evt).toLootParams(), getLevel(evt)!!)
+        else
+            emptyList()
     }
 
     override fun cleanup(evt: PasturePokemonTickedEvent, drops: MutableList<ItemStack>) {
