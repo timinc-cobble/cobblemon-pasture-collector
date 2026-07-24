@@ -1,0 +1,146 @@
+name: Publish mod release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mod-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare release JARs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download and select release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ASSET_PATTERN: ${{ vars.PUBLISH_ASSET_PATTERN }}
+        run: |
+          set -euo pipefail
+
+          pattern="${ASSET_PATTERN:-*.jar}"
+          mkdir -p release-assets publish
+
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets \
+            --pattern "$pattern"
+
+          shopt -s nullglob nocaseglob
+          for asset in release-assets/*.jar; do
+            filename="${asset##*/}"
+            case "${filename,,}" in
+              *-dev.jar|*-dev-shadow.jar|*-javadoc.jar|*-shadow.jar|*-slim.jar|*-sources.jar)
+                echo "Ignoring non-release JAR: $filename"
+                ;;
+              *)
+                cp "$asset" "publish/$filename"
+                ;;
+            esac
+          done
+
+          jars=(publish/*.jar)
+          if (( ${#jars[@]} == 0 )); then
+            echo "::error::No publishable JAR assets were found on release $RELEASE_TAG."
+            echo "::error::Attach a release JAR or set PUBLISH_ASSET_PATTERN to a matching glob."
+            exit 1
+          fi
+
+          echo "Publishing ${#jars[@]} release JAR(s):"
+          printf '  %s\n' "${jars[@]#publish/}"
+
+      - name: Preserve selected JARs for publisher jobs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-jars
+          path: publish/*.jar
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  publish-modrinth:
+    name: Publish to Modrinth
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate Modrinth configuration
+        shell: bash
+        env:
+          PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          PLATFORM_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ -n "$PROJECT_ID" ]] || {
+            echo "::error::Repository variable MODRINTH_PROJECT_ID is not configured."
+            exit 1
+          }
+          [[ -n "$PLATFORM_TOKEN" ]] || {
+            echo "::error::Repository secret MODRINTH_TOKEN is not configured."
+            exit 1
+          }
+
+      - name: Restore release JARs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-jars
+          path: publish
+
+      - name: Publish to Modrinth
+        uses: Kira-NT/mc-publish@52307b03863581dec6b652b83e597aec02ebb075 # v3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: publish/*.jar
+          version-type: ${{ github.event.release.prerelease && 'beta' || 'release' }}
+          fail-mode: fail
+          retry-attempts: 2
+
+  publish-curseforge:
+    name: Publish to CurseForge
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate CurseForge configuration
+        shell: bash
+        env:
+          PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          PLATFORM_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          [[ -n "$PROJECT_ID" ]] || {
+            echo "::error::Repository variable CURSEFORGE_PROJECT_ID is not configured."
+            exit 1
+          }
+          [[ -n "$PLATFORM_TOKEN" ]] || {
+            echo "::error::Repository secret CURSEFORGE_TOKEN is not configured."
+            exit 1
+          }
+
+      - name: Restore release JARs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-jars
+          path: publish
+
+      - name: Publish to CurseForge
+        uses: Kira-NT/mc-publish@52307b03863581dec6b652b83e597aec02ebb075 # v3
+        with:
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: publish/*.jar
+          version-type: ${{ github.event.release.prerelease && 'beta' || 'release' }}
+          fail-mode: fail
+          retry-attempts: 2
