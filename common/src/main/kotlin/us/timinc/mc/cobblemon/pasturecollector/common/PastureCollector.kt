@@ -3,11 +3,7 @@ package us.timinc.mc.cobblemon.pasturecollector.common
 import com.cobblemon.mod.common.api.Priority
 import com.cobblemon.mod.common.api.reactive.EventObservable
 import com.cobblemon.mod.common.item.group.CobblemonItemGroups
-import net.minecraft.core.Registry
-import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.world.inventory.MenuType
 import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockBehaviour
 import us.timinc.mc.cobblemon.droploottables.DropLootTables
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.Registries.Block.PASTURE_COLLECTOR
@@ -20,6 +16,8 @@ import us.timinc.mc.cobblemon.pasturecollector.common.inventory.PastureCollector
 import us.timinc.mc.cobblemon.timcore.AbstractConfig
 import us.timinc.mc.cobblemon.timcore.AbstractMod
 import us.timinc.mc.cobblemon.timcore.BlockContainer
+import us.timinc.mc.cobblemon.timcore.BlockEntityTypeContainer
+import us.timinc.mc.cobblemon.timcore.MenuTypeContainer
 
 const val MOD_ID = "pasturecollector"
 
@@ -65,20 +63,21 @@ object PastureCollector : AbstractMod<PastureCollector.PastureCollectorConfig>(
             )
         }
 
-        object Entity {
-            val PASTURE_COLLECTOR_BLOCK_ENTITY: BlockEntityType<PastureCollectorBlockEntity> = Registry.register(
-                BuiltInRegistries.BLOCK_ENTITY_TYPE,
-                modResource("pasture_collector_entity"),
-                BlockEntityType.Builder.of(
+        object BlockEntity {
+            val PASTURE_COLLECTOR_BLOCK_ENTITY = registerBlockEntity(
+                "pasture_collector_entity",
+                BlockEntityTypeContainer(
                     ::PastureCollectorBlockEntity,
-                    PASTURE_COLLECTOR.block
-                ).build(null)
+                    listOf(PASTURE_COLLECTOR),
+                ),
             )
         }
 
         object Menu {
-            val PASTURE_COLLECTOR_MENU: MenuType<PastureCollectorMenu> =
-                MenuType.register("pasture_collector", ::PastureCollectorMenu)
+            val PASTURE_COLLECTOR_MENU = registerMenu(
+                "pasture_collector",
+                MenuTypeContainer(::PastureCollectorMenu),
+            )
         }
     }
 
@@ -112,7 +111,7 @@ object PastureCollector : AbstractMod<PastureCollector.PastureCollectorConfig>(
         @Suppress("UnusedExpression")
         Registries.Block
         @Suppress("UnusedExpression")
-        Registries.Entity
+        Registries.BlockEntity
         @Suppress("UnusedExpression")
         Registries.Menu
         @Suppress("UnusedExpression")

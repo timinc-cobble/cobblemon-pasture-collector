@@ -12,6 +12,9 @@ architectury {
 loom {
     enableTransitiveAccessWideners.set(true)
     silentMojangMappingsLicense()
+    neoForge {
+        accessTransformer("src/main/development/accesstransformer.cfg")
+    }
 }
 
 val shadowCommon: Configuration by configurations.creating

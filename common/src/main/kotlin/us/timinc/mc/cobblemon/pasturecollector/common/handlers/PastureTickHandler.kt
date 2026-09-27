@@ -95,7 +95,7 @@ object PastureTickHandler : DropHandler<PastureDropper.Context, PastureDropper, 
         }
 
         applicableDroppers.forEach { it.advanceCooldown(context) }
-        cleanup(evt, drops)
+        cleanup(evt, drops, readyDroppers)
     }
 
     override fun processOtherDrops(evt: PasturePokemonTickedEvent): List<ItemStack> {
@@ -126,7 +126,11 @@ object PastureTickHandler : DropHandler<PastureDropper.Context, PastureDropper, 
             emptyList()
     }
 
-    override fun cleanup(evt: PasturePokemonTickedEvent, drops: MutableList<ItemStack>) {
+    override fun cleanup(
+        evt: PasturePokemonTickedEvent,
+        drops: MutableList<ItemStack>,
+        droppers: List<PastureDropper>,
+    ) {
         if (!PastureCollector.config.playCryOnDrop) return
         if (drops.all { it.isEmpty }) return
 

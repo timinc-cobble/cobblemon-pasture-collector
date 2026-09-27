@@ -13,9 +13,6 @@ logoFile="${modId}_small.png"
 displayUrl="${modDiscord}"
 modUrl="${modSource}"
 
-[[mixins]]
-config = "mixins.droploottables.json"
-
 [[dependencies.${modId}]]
 modId = "minecraft"
 mandatory = true
