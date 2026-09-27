@@ -79,11 +79,7 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     fun tick() {
         if (PastureCollector.config.tickType != TickType.TICK) return
 
-        (level as? ServerLevel)?.let { level ->
-            if (lastIntervalRep - level.gameTime < PastureCollector.config.blockTickInterval) return
-
-            intervalRep()
-        }
+        intervalRep()
     }
 
     fun randomTick() {
