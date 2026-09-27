@@ -10,12 +10,6 @@ plugins {
 }
 
 allprojects {
-    repositories {
-        mavenCentral()
-    }
-}
-
-subprojects {
     apply(plugin = "java")
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
@@ -23,6 +17,7 @@ subprojects {
     group = project.property("maven_group")!!
 
     repositories {
+        mavenCentral()
         maven("https://artefacts.cobblemon.com/releases/")
         maven("https://api.modrinth.com/maven")
     }

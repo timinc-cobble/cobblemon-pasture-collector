@@ -30,5 +30,6 @@
     "cobblemon": "${cobblemon_version}",
     "tim_core": ">=${tim_core_fabric_version}",
     "droploottables": ">=${droploottables_fabric_version}"
-  }
+  },
+  "icon": "${modId}_small.png"
 }

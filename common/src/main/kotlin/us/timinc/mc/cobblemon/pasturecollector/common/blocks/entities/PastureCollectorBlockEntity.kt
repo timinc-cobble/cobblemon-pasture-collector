@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.chat.Component
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.Container
+import net.minecraft.world.ContainerHelper
 import net.minecraft.world.WorldlyContainer
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.AbstractContainerMenu
@@ -24,7 +25,7 @@ import net.minecraft.world.phys.Vec3
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.PastureCollectorConfig.Companion.TargetMon
 import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.PastureCollectorConfig.Companion.TickType
-import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.Registries.Entity.PASTURE_COLLECTOR_BLOCK_ENTITY
+import us.timinc.mc.cobblemon.pasturecollector.common.PastureCollector.Registries.BlockEntity.PASTURE_COLLECTOR_BLOCK_ENTITY
 import us.timinc.mc.cobblemon.pasturecollector.common.event.PasturePokemonTickedEvent
 import us.timinc.mc.cobblemon.pasturecollector.common.inventory.PastureCollectorMenu
 import us.timinc.mc.cobblemon.timcore.getIntOrNull
@@ -33,7 +34,7 @@ import kotlin.math.min
 import kotlin.random.Random
 
 class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
-    BaseContainerBlockEntity(PASTURE_COLLECTOR_BLOCK_ENTITY, pos, state), WorldlyContainer {
+    BaseContainerBlockEntity(PASTURE_COLLECTOR_BLOCK_ENTITY.type, pos, state), WorldlyContainer {
     companion object {
         const val CONTAINER_SIZE: Int = 4
 
@@ -61,6 +62,7 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     override fun getItem(i: Int): ItemStack = items[i]
     override fun setItem(i: Int, itemStack: ItemStack) {
         items[i] = itemStack
+        setChanged()
     }
 
     override fun canTakeItem(container: Container, i: Int, itemStack: ItemStack): Boolean = i in 0..<CONTAINER_SIZE
@@ -77,11 +79,7 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
     fun tick() {
         if (PastureCollector.config.tickType != TickType.TICK) return
 
-        (level as? ServerLevel)?.let { level ->
-            if (lastIntervalRep - level.gameTime < PastureCollector.config.blockTickInterval) return
-
-            intervalRep()
-        }
+        intervalRep()
     }
 
     fun randomTick() {
@@ -262,12 +260,14 @@ class PastureCollectorBlockEntity(val pos: BlockPos, state: BlockState) :
 
     override fun saveAdditional(compoundTag: CompoundTag, provider: HolderLookup.Provider) {
         super.saveAdditional(compoundTag, provider)
+        ContainerHelper.saveAllItems(compoundTag, items, provider)
         compoundTag.putLong("last_interval_rep", lastIntervalRep)
         compoundTag.putInt("random_ticks", randomTicks)
     }
 
     override fun loadAdditional(compoundTag: CompoundTag, provider: HolderLookup.Provider) {
         super.loadAdditional(compoundTag, provider)
+        ContainerHelper.loadAllItems(compoundTag, items, provider)
         this.lastIntervalRep = compoundTag.getLongOrNull("last_interval_rep") ?: 0L
         this.randomTicks = compoundTag.getIntOrNull("random_ticks") ?: 0
     }

@@ -14,6 +14,6 @@ object PastureCollectorModClient : ClientModInitializer {
             RenderType.cutout(),
             PASTURE_COLLECTOR.block
         )
-        MenuScreens.register(PASTURE_COLLECTOR_MENU, ::PastureCollectorBlockScreen)
+        MenuScreens.register(PASTURE_COLLECTOR_MENU.type, ::PastureCollectorBlockScreen)
     }
 }

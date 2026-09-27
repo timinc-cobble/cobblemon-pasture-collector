@@ -75,7 +75,7 @@ class PastureCollectorBlock(properties: Properties) : BaseEntityBlock(properties
         blockEntityType: BlockEntityType<T?>
     ): BlockEntityTicker<T?>? = if (level !is ServerLevel) null else createTickerHelper(
         blockEntityType,
-        PastureCollector.Registries.Entity.PASTURE_COLLECTOR_BLOCK_ENTITY,
+        PastureCollector.Registries.BlockEntity.PASTURE_COLLECTOR_BLOCK_ENTITY.type,
         PastureCollectorBlockEntity.TICKER::tick
     )
 

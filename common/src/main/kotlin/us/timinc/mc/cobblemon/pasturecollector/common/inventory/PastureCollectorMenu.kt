@@ -13,7 +13,7 @@ import us.timinc.mc.cobblemon.pasturecollector.common.blocks.entities.PastureCol
 import us.timinc.mc.cobblemon.pasturecollector.common.blocks.entities.PastureCollectorBlockEntity.Companion.CONTAINER_SIZE
 
 class PastureCollectorMenu(syncId: Int, playerInventory: Inventory, val container: Container) :
-    AbstractContainerMenu(PASTURE_COLLECTOR_MENU, syncId) {
+    AbstractContainerMenu(PASTURE_COLLECTOR_MENU.type, syncId) {
 
     constructor(syncId: Int, playerInventory: Inventory) : this(
         syncId,
