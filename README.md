@@ -1,6 +1,6 @@
 # Pasture Collector
 
-v1.7.3-1.4
+v1.8.1-1.4
 
 [Modrinth](https://modrinth.com/mod/cobblemon-pasturecollector/)
 
