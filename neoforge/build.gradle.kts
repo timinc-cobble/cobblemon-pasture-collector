@@ -1,7 +1,7 @@
 plugins {
+    id("com.gradleup.shadow")
     id("dev.architectury.loom")
     id("architectury-plugin")
-    id("com.gradleup.shadow")
 }
 
 architectury {
@@ -12,18 +12,27 @@ architectury {
 loom {
     enableTransitiveAccessWideners.set(true)
     silentMojangMappingsLicense()
+
+    @Suppress("UnstableApiUsage")
+    mixin {
+        useLegacyMixinAp = true
+        defaultRefmapName.set("mixins.${rootProject.name}.${project.name}.refmap.json")
+    }
+
     neoForge {
         accessTransformer("src/main/development/accesstransformer.cfg")
     }
 }
 
-val shadowCommon: Configuration by configurations.creating
+val shadowBundle = configurations.create("shadowBundle") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
 
 repositories {
-    mavenCentral()
     maven("https://hub.spigotmc.org/nexus/content/groups/public/")
-    maven("https://maven.neoforged.net/releases/")
     maven("https://thedarkcolour.github.io/KotlinForForge/")
+    maven("https://maven.neoforged.net/releases")
 }
 
 dependencies {
@@ -31,9 +40,9 @@ dependencies {
     mappings(loom.officialMojangMappings())
     neoForge("net.neoforged:neoforge:${property("neoforge_version")}")
 
-    modImplementation("com.cobblemon:neoforge:${property("cobblemon_version")}")
+    modImplementation("com.cobblemon:neoforge:${property("cobblemon_version")}") { isTransitive = false }
     //Needed for cobblemon
-    forgeRuntimeLibrary("thedarkcolour:kotlinforforge-neoforge:${property("kotlin_for_forge_version")}") {
+    implementation("thedarkcolour:kotlinforforge-neoforge:${property("kotlin_for_forge_version")}") {
         exclude("net.neoforged.fancymodloader", "loader")
     }
 
@@ -41,22 +50,21 @@ dependencies {
     "developmentNeoForge"(project(":common", configuration = "namedElements")) {
         isTransitive = false
     }
-    shadowCommon(project(":common", configuration = "transformProductionNeoForge"))
-
-    modImplementation("maven.modrinth:cobblemon-tim-core:${property("tim_core_neoforge_version")}")
-    modImplementation("maven.modrinth:cobblemon-droploottables:${property("droploottables_neoforge_version")}")
+    shadowBundle(project(":common", configuration = "transformProductionNeoForge"))
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:${property("junit_version")}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${property("junit_version")}")
+
+    modImplementation("us.timinc.mc.cobblemon.timcore:neoforge:${property("tim_core_version")}") { isTransitive = false }
+    modImplementation("us.timinc.mc.cobblemon.droploottables:neoforge:${property("droploottables_version")}") { isTransitive = false }
 }
-
-
 
 tasks {
     processResources {
         inputs.property("version", project.version)
 
         filesMatching("META-INF/neoforge.mods.toml") {
+            @Suppress("DEPRECATION", "We'll figure it out when Gradle 10 releases")
             expand(project.properties)
         }
     }
@@ -66,11 +74,18 @@ tasks {
         archiveClassifier.set("dev-slim")
     }
 
+    sourcesJar {
+        dependsOn(project(":common").tasks.named("sourcesJar"))
+        from(project(":common").tasks.named<Jar>("sourcesJar").get().archiveFile.map { zipTree(it) })
+    }
+
     shadowJar {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
         exclude("fabric.mod.json")
         archiveClassifier.set("dev-shadow")
         archiveBaseName.set("${rootProject.property("archives_base_name")}-${project.name}")
-        configurations = listOf(shadowCommon)
+        configurations = listOf(shadowBundle)
     }
 
     remapJar {
